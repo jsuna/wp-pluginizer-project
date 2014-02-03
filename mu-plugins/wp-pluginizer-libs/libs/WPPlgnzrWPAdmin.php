@@ -197,7 +197,6 @@ class WPPlgnzrWPAdmin {
                 $dep_fld_data = $this->fields[$dep_fld];
                 $this->get_field($dep_fld,$dep_fld_data,$opts);
               }
-              unset($this->fields[$dep_fld]);
             }
           }
 
@@ -205,7 +204,8 @@ class WPPlgnzrWPAdmin {
           echo '</fieldset>';
           echo '</td></tr>';
         }else{
-          $this->get_field($fld,$data,$opts);
+          if(!isset($data['parent']))
+            $this->get_field($fld,$data,$opts);
         }
       }
 
