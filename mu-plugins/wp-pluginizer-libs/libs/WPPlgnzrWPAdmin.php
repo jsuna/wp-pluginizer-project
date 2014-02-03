@@ -114,6 +114,59 @@ class WPPlgnzrWPAdmin {
       },2500);</script>';
     }
   }
+  public function get_field($fld,$data,$opts){
+    global $plugin_page;
+    $fldname = $plugin_page.'['.$fld.']';
+    $readonly = (isset($data['readonly']) && $data['readonly'])?' readonly="readonly"':'';
+    $style = (isset($data['width']) && !empty($data['width']))?' style="width:'.$data['width'].'"':'';
+    $id = (isset($data['id']) && !empty($data['id']))?' id="'.$data['id'].'"':'';
+    $class = (isset($data['class']) && !empty($data['class']))?' class="'.$data['class'].'"':'';
+    switch($data['type']){
+      case 'text':
+        $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
+        echo '<tr>'.
+          '<td style="width:22%"><label style="font-weight:bold">'.$data['label'].'</label></td>'.
+          '<td style="width:78%">'.
+          '<input'.$id.$class.$style.$readonly.' type="text" value="'.$fldval.'" name="'.$fldname.'" /></td>'.
+          '</tr>';
+        break;
+      case 'textarea':
+        $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
+        echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>'.
+          '<tr>'.
+          '<td colspan="2">'.
+          '<textarea'.$id.$class.$style.$readonly.' name="'.$fldname.'">'.$fldval.'</textarea></td>'.
+          '</tr>';
+        break;
+      case 'checkbox':
+        $chked = (isset($opts[$fld]))?' checked="checked"':'';
+        echo '<tr>'.
+          '<td colspan="2">'.
+          '<input type="checkbox"'.$id.$class.$style.$readonly.$chked.' name="'.$fldname.'" /> '.
+          '<label>'.$data['label'].'</label></td>'.
+          '</tr>';
+        break;
+      case 'checkbox_select':
+        echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>';
+        if(count($data['options'])){
+          foreach($data['options'] as $chkopt=>$label){
+            $chked = (isset($opts[$fld][$chkopt]))?' checked="checked"':'';
+            $fldname = $plugin_page.'['.$fld.']['.$chkopt.']';
+            echo '<tr>'.
+              '<td colspan="2">'.
+              '<input type="checkbox"'.$id.$class.$style.$readonly.$chked.' name="'.$fldname.'" /> '.
+              '<label>'.$label.'</label></td>'.
+              '</tr>';
+          }
+        }
+        break;
+    }
+    $padding = ($data['type'] == 'textarea' || $data['type'] == 'checkbox_select')?'':'padding-left:22%';
+    echo (isset($data['description']) && $data['type'] != 'checkbox')?
+      '<tr><td style="text-align:left;font-size:12px;padding-bottom:10px;'.$padding.'" colspan="2"><address>'
+      .$data['description']
+      .'</address></td></tr>':'';
+  }
   public function _form(){
     global $plugin_page;
     $opts = $this->get_options();
@@ -121,57 +174,24 @@ class WPPlgnzrWPAdmin {
     if(isset($this->fields) && count($this->fields)){
       echo '<table cellspacing="0" cellpadding="0" style="width:60%;margin:0 20px">';
       foreach($this->fields as $fld=>$data){
-        $fldname = $plugin_page.'['.$fld.']';
-        $readonly = (isset($data['readonly']) && $data['readonly'])?' readonly="readonly"':'';
-        $style = (isset($data['width']) && !empty($data['width']))?' style="width:'.$data['width'].'"':'';
-        $id = (isset($data['id']) && !empty($data['id']))?' id="'.$data['id'].'"':'';
-        $class = (isset($data['class']) && !empty($data['class']))?' class="'.$data['class'].'"':'';
-        switch($data['type']){
-          case 'text':
-            $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
-            echo '<tr>'.
-              '<td style="width:22%"><label style="font-weight:bold">'.$data['label'].'</label></td>'.
-              '<td style="width:78%">'.
-              '<input'.$id.$class.$style.$readonly.' type="text" value="'.$fldval.'" name="'.$fldname.'" /></td>'.
-              '</tr>';
-            break;
-          case 'textarea':
-            $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
-            echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>'.
-              '<tr>'.
-              '<td colspan="2">'.
-              '<textarea'.$id.$class.$style.$readonly.' name="'.$fldname.'">'.$fldval.'</textarea></td>'.
-              '</tr>';
-            break;
-          case 'checkbox':
-            $chked = (isset($opts[$fld]))?' checked="checked"':'';
-            echo '<tr>'.
-            '<td colspan="2">'.
-            '<input type="checkbox"'.$id.$class.$style.$readonly.$chked.' name="'.$fldname.'" /> '.
-            '<label>'.$data['label'].'</label></td>'.
-            '</tr>';
-            break;
-          case 'checkbox_select':
-            echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>';
-            if(count($data['options'])){
-              foreach($data['options'] as $chkopt=>$label){
-                $chked = (isset($opts[$fld][$chkopt]))?' checked="checked"':'';
-                $fldname = $plugin_page.'['.$fld.']['.$chkopt.']';
-                echo '<tr>'.
-                  '<td colspan="2">'.
-                  '<input type="checkbox"'.$id.$class.$style.$readonly.$chked.' name="'.$fldname.'" /> '.
-                  '<label>'.$label.'</label></td>'.
-                  '</tr>';
+        if($data['type'] == 'group'){
+          echo '<tr><td colspan="2">';
+          echo '<fieldset><legend><strong>'.$data['label'].'</strong></legend>';
+          echo '<table style="width:100%" cellspacing="0">';
+          if(count($data['dependants'])){
+            foreach($data['dependants'] as $dep_fld){
+              if(isset($this->fields[$dep_fld])){
+                $dep_fld_data = $this->fields[$dep_fld];
+                $this->get_field($dep_fld,$dep_fld_data,$opts);
               }
-
             }
-            break;
+          }
+          echo '</table>';
+          echo '</fieldset>';
+          echo '</td></tr>';
+        }else{
+          $this->get_field($fld,$data,$opts);
         }
-        $padding = ($data['type'] == 'textarea' || $data['type'] == 'checkbox_select')?'':'padding-left:22%';
-        echo (isset($data['description']) && $data['type'] != 'checkbox')?
-          '<tr><td style="text-align:left;font-size:12px;padding-bottom:10px;'.$padding.'" colspan="2"><address>'
-          .$data['description']
-          .'</address></td></tr>':'';
       }
 
       echo '<tr><td style="text-align:left;font-size:12px;padding-bottom:10px;" colspan="2">'
