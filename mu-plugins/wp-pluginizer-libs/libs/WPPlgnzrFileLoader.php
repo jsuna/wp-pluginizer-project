@@ -27,5 +27,4 @@ class WPPlgnzrFileLoader {
     }
     return true;
   }
-
-} 
+}
