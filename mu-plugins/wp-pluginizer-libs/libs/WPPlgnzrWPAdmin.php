@@ -160,6 +160,19 @@ class WPPlgnzrWPAdmin {
           }
         }
         break;
+      case 'select':
+        echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>';
+        echo '<tr>'.
+          '<td colspan="2">';
+        echo '<select'.$id.$class.$style.$readonly.' name="'.$fldname.'">';
+        if(count($data['options'])){
+          foreach($data['options'] as $selopt=>$label){
+            $selected = (isset($opts[$fld]) && $opts[$fld] == $selopt)?' selected="selected"':'';
+              echo '<option'.$selected.' value="'.$selopt.'">'.$label.'</option>';
+          }
+        }
+        echo '</td></tr>';
+        break;
     }
     $padding = ($data['type'] == 'textarea' || $data['type'] == 'checkbox_select')?'':'padding-left:22%';
     echo (isset($data['description']) && $data['type'] != 'checkbox')?
