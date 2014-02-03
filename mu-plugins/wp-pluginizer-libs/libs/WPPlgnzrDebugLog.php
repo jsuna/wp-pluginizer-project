@@ -7,6 +7,9 @@
  */
 class WPPlgnzrDebugLog {
   public $lg = false;
+  public function __construct(){
+    die('testing for new commit');
+  }
   public function start($filename=false){
     $filename = ($filename)?$filename:ABSPATH.'/wp_content/uploads/debug_log_'.date('Y-m-d').'.txt';
     $this->lg = @fopen($filename,'a+');
