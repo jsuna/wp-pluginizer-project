@@ -31,4 +31,3 @@ class WPPlgnzrPluginizerLibs {
 }
 $wpplgnzr_pluginizer_libs = new WPPlgnzrPluginizerLibs;
 $wpplgnzr_pluginizer_libs->load_libs();
-

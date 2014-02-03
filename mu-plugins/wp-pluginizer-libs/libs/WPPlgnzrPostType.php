@@ -1,5 +1,4 @@
 <?php
-
 class WPPlgnzrPostType {
   public function __construct(){
     add_action( 'init', array($this,'_post_type') );
