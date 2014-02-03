@@ -197,8 +197,10 @@ class WPPlgnzrWPAdmin {
                 $dep_fld_data = $this->fields[$dep_fld];
                 $this->get_field($dep_fld,$dep_fld_data,$opts);
               }
+              unset($this->fields[$dep_fld]);
             }
           }
+
           echo '</table>';
           echo '</fieldset>';
           echo '</td></tr>';
