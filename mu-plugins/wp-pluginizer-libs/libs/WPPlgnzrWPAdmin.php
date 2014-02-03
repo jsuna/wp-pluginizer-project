@@ -171,7 +171,7 @@ class WPPlgnzrWPAdmin {
               echo '<option'.$selected.' value="'.$selopt.'">'.$label.'</option>';
           }
         }
-        echo '</td></tr>';
+        echo '</select></td></tr>';
         break;
     }
     $padding = ($data['type'] == 'textarea' || $data['type'] == 'checkbox_select')?'':'padding-left:22%';
