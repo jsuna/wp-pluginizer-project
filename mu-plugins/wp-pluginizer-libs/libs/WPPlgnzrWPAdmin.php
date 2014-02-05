@@ -37,9 +37,35 @@ class WPPlgnzrWPAdmin {
    */
   public $menu_pages = array();
   public $page_renderer = array();
+  public $ajax_handler = 'wpplgnzr_handle_admin_ajax';
   public function __construct(){
     $this->page_renderer = array($this,'_render_settings');
     add_action('admin_menu',array($this,'_admin_menu'));
+    add_action('wp_ajax_'.$this->ajax_handler,array($this,'handle_ajax'));
+    add_action('admin_enqueue_scripts',array($this,'load_scripts'),999);
+  }
+  public function handle_ajax(){
+    if(isset($_POST['method'])){
+      if(method_exists($this,$_POST['method'])){
+        $args = null;
+        if(isset($_POST['post']))
+          parse_str($_POST['post'],$args);
+        $resp = call_user_func($_POST['method'],$args);
+        echo json_encode($resp);
+      }else{
+        $msg = __CLASS__.'::'.$_POST['method'].' not found.';
+        echo '{"success":false,"msg":"'.$msg.'"}';
+      }
+      exit;
+    }
+  }
+  public function load_scripts(){ ?>
+    <script type="text/javascript">
+      window.WPPlgnzrWPAdmin = {
+        ajax_handler:'<?php echo $this->ajax_handler; ?>'
+      }
+    </script>
+    <?php
   }
   public function _admin_menu(){
     //main menu page support here..
