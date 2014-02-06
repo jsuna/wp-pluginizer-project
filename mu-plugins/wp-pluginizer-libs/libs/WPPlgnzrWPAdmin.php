@@ -73,16 +73,21 @@ class WPPlgnzrWPAdmin {
       foreach($this->menu_pages['main'] as $page_args){
         extract($page_args);
         $ph = add_menu_page($page_title,$menu_text,$capability,$menu_slug,$this->page_renderer,$icon_url,$position);
-        //add js/css to the pages here...??
+        //add js/css to the pages here...
+        add_action('admin_print_scripts-'.$ph,array($this,'_load_admin_assets'));
       }
     }
     if(isset($this->menu_pages['sub']) && count($this->menu_pages['sub'])){
       foreach($this->menu_pages['sub'] as $page_args){
         extract($page_args);
         $ph = add_submenu_page($slug,$page_title,$menu_text,$capability,$menu_slug,$this->page_renderer);
-        //add js/css to the pages here...??
+        //add js/css to the pages here...
+        add_action('admin_print_scripts-'.$ph,array($this,'_load_admin_assets'));
       }
     }
+  }
+  public function _load_admin_scripts(){
+    do_action('wpplgnzr_admin_assets');
   }
   //@override - override this function in child classes to customize..
   public function _render_settings(){
