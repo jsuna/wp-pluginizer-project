@@ -50,7 +50,7 @@ class WPPlgnzrWPAdmin {
         $args = null;
         if(isset($_POST['post']))
           parse_str($_POST['post'],$args);
-        $resp = call_user_func($_POST['method'],$args);
+        $resp = call_user_func(array($this,$_POST['method']),$args);
         echo json_encode($resp);
       }else{
         $msg = __CLASS__.'::'.$_POST['method'].' not found.';
