@@ -86,7 +86,7 @@ class WPPlgnzrWPAdmin {
       }
     }
   }
-  public function _load_admin_scripts(){
+  public function _load_admin_assets(){
     do_action('wpplgnzr_admin_assets');
   }
   //@override - override this function in child classes to customize..
