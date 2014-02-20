@@ -5,7 +5,7 @@
  * Date: 1/27/14
  * Time: 12:42 PM
  */
-//if(class_exists('thesis_box')){
+if(class_exists('thesis_box')){
   class WPPlgnzrThesisBox extends thesis_box {
     public $_html_opts = array('div','section');
     public $_html_def = 'div';
@@ -24,4 +24,4 @@
       return $html_opts;
     }
   }
-//}
+}
