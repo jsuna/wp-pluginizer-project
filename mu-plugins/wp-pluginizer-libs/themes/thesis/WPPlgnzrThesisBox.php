@@ -5,7 +5,8 @@
  * Date: 1/27/14
  * Time: 12:42 PM
  */
-if(class_exists('thesis_box')){
+$wpplgnzr_current_theme = wp_get_theme();
+if(strtolower($wpplgnzr_current_theme->name) == 'thesis'){
   class WPPlgnzrThesisBox extends thesis_box {
     public $_html_opts = array('div','section');
     public $_html_def = 'div';
