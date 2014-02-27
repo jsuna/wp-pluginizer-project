@@ -5,8 +5,107 @@
  * Date: 1/31/14
  * Time: 5:15 PM
  */
-
-class WPPlgnzrDataScraper {
+if(!session_id()) session_start();
+class WPPlgnzrMultiCurl {
+  public $batches = array(); //contains our urls to process
+  public $batch_size = 10; //number of urls to process at once..NOTE: still governed by $max_reqs
+  public $max_reqs = 5; //max number of connections at any given time..
+  public $req_urls = array(); //all our urls
+  public $requrls = array();  //current batch
+  public $chandles = array(); //curl handles to init/exec..
+  public $req_map = array();  //chandle/url relationship map...
+  public function set_batches(){
+    unset($_SESSION['wpplginzr_mcurl_batches']);
+    if(!isset($_SESSION['wpplginzr_mcurl_batches']))
+      $_SESSION['wpplginzr_mcurl_batches'] = (count($this->req_urls) > $this->batch_size)?
+        array_chunk($this->req_urls,$this->batch_size):array($this->req_urls);
+    #echo '<pre>';die(print_r($_SESSION['wpplginzr_mcurl_batches']));
+  }
+  public function set_batch(){
+    if(count($_SESSION['wpplginzr_mcurl_batches']))
+      $this->requrls = array_shift($_SESSION['wpplginzr_mcurl_batches']);
+    #echo '<pre>';print_r($this->requrls);die(print_r($_SESSION['wpplginzr_mcurl_batches']));
+  }
+  function create_curl_handles(){
+    $this->set_batch();
+    if(count($this->requrls)){
+      foreach($this->requrls as $ui=>$requrl){
+        $ch = curl_init();
+        if(is_resource($ch)){
+          curl_setopt($ch,CURLOPT_URL,$requrl);
+          curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+          #curl_setopt($ch, CURLOPT_WRITEFUNCTION,array($this,"progress_function"));
+          $this->chandles[] = $ch;
+          $key = (string) $ch;
+          $this->reqmap[$key] = $ui;
+        }
+      }
+    }
+    unset($ch);
+    #echo '<pre>';print_r($this->chandles);die(print_r($this->reqmap));
+  }
+  function multi_curl(){
+    /*
+			Initialize curl_multi handle -
+			loop up to '$winsize' times, and add a curl handle from $chandles
+			- this is our 'rolling window' meaning
+			 only $winsize parrallel requests at a time are ever active.
+			*/
+    $mh = curl_multi_init();
+    for($i=0;$i<$this->max_reqs;$i++){
+      $chandle = array_shift($this->chandles);
+      if(is_resource($chandle))
+        curl_multi_add_handle($mh, $chandle);
+      if($i == count($this->chandles)) break;
+    }
+    /** Start curling.. */
+    $running = null;
+    do{
+      while(($execrun = curl_multi_exec($mh, $running)) == CURLM_CALL_MULTI_PERFORM);
+      if($execrun != CURLM_OK)
+        break;
+      usleep(1000);
+      // check for finished requests.. call the callback function and que up another request if we have any left..
+      while ($done = curl_multi_info_read($mh)) {
+        if(is_resource($done['handle'])){
+          // get the info and content returned on the request
+          $info = curl_getinfo($done['handle']);
+          $output = curl_multi_getcontent($done['handle']);
+          // send the return values to the callback function.
+          $callback = array($this,'mcurl_callback');
+          $this->finishcnt++;
+          if(is_callable($callback)) {
+            $key = (string) $done['handle'];
+            $key = $this->reqmap[$key];
+            $request = $this->requrls[$key];
+            unset($this->requrls[$key]);
+            unset($this->reqmap[$key]);
+            call_user_func($callback, $output, $info, $request, count($this->requrls),
+                           count($_SESSION['wpplginzr_mcurl_batches']));
+          }
+          // remove the curl handle that just completed
+          curl_multi_remove_handle($mh, $done['handle']);
+          // add the next curl handle if any are left..
+          if (count($this->chandles)){
+            $chandle = array_shift($this->chandles);
+            if(is_resource($chandle)){
+              curl_multi_add_handle($mh, $chandle);
+              $key = (string) $chandle;
+              $this->reqmap[$key] = $i;
+              $i++;
+            }
+          }
+        }
+      }
+    }while($running > 0);
+    curl_multi_close($mh);
+  }
+  public function mcurl_callback($output, $info, $request, $finishcnt, $batchcnt){
+    if(method_exists($this,'process_mcurl_resp'))
+      $this->process_mcurl_resp(compact('output', 'info', 'request', 'finishcnt', 'batchcnt'));
+  }
+}
+class WPPlgnzrDataScraper extends WPPlgnzrMultiCurl {
   public function __construct(){
     if(isset($this->cookie_jar_path)){
       if(!is_dir($this->cookie_jar_path))
