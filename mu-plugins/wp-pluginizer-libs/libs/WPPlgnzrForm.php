@@ -56,11 +56,18 @@ class WPPlgnzrForm {
     }
     return false;
   }
-  public function form(){
-    echo $this->start();
-    #echo '<pre>';print_r($this->fields);die;
-    echo $this->form_body();
-    echo $this->end();
+  public function form($ret = false){
+    if(!$ret){
+      echo $this->start();
+      #echo '<pre>';print_r($this->fields);die;
+      echo $this->form_body();
+      echo $this->end();
+    }else{
+      return $this->start().
+             $this->form_body().
+             $this->end();
+    }
+
   }
   public function field($fld,$data,$opts=array(),$fld_base=false){
     $opts = apply_filters('wpplgnzr_form_field_vals',$opts);
@@ -76,6 +83,7 @@ class WPPlgnzrForm {
       wp_die(__CLASS__.' Error: doing it wrong... no field type defined... for '.$fld);
     $type = ' type="'.$data['type'].'"';
     $desc = (isset($data['description']))?$data['description']:'';
+    $tag = (isset($data['tag']))?$data['tag']:'div';
     switch($data['type']){
       case 'text':
         $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
@@ -96,6 +104,22 @@ class WPPlgnzrForm {
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L]<br>[F]<br>[D]<br>'
         );
+        break;
+      case 'radio_select':
+        $type = ' type="radio"';
+        if(count($data['options'])){
+          foreach($data['options'] as $chkopt=>$label){
+            $chked = (isset($opts[$fld][$chkopt]))?' checked="checked"':'';
+            $fldname = $plugin_page.'['.$fld.']['.$chkopt.']';
+            $field['option_field'][$data['label']]['format'] = '[OFL]<br>[OFO]<br>[D]<br>';
+            $field['option_field'][$data['label']]['desc'] = (isset($data['description']))?$data['description']:'';
+            $field['option_field'][$data['label']]['opts'][] = array(
+              'label'=>'<label class="wpplgnzr-form-label">'.$label.'</label>',
+              'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname} />",
+              'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[F][L]<br>'
+            );
+          }
+        }
         break;
       case 'checkbox':
         $chked = (isset($opts[$fld]))?' checked="checked"':'';
@@ -160,7 +184,7 @@ class WPPlgnzrForm {
       case 'html':
         $field = array(
           'label'=>'',
-          'field'=>'<'.$data['tag'].$id.$class.'></'.$data['tag'].'>',
+          'field'=>'<'.$tag.$id.$class.'>'.$desc.'</'.$tag.'>',
           'desc'=>'',
           'format'=>(isset($data['format']))?$data['format']:'[F]'
         );
