@@ -2,8 +2,6 @@
 class WPPlgnzrPostType {
   public function __construct(){
     add_action( 'init', array($this,'_post_type') );
-    //add_action('init', array($this,'development_amenities_taxonomies'));
-    //add_action('init', array($this,'development_views_taxonomies'));
   }
   public function _post_type(){
     $sing_name = $this->post_type;
@@ -24,7 +22,7 @@ class WPPlgnzrPostType {
       'menu_name'=>(isset($this->pt_name))?$this->pt_name:ucwords($plur_name)
     );
     //allow child classes/plugins to modify...
-    $labels = apply_filters('jvc_post_type_labels',$labels);
+    $labels = apply_filters('wpplgnzr_post_type_labels',$labels);
     $args = array(
       'labels'=>$labels,
       'description'=>$this->description,
@@ -37,7 +35,7 @@ class WPPlgnzrPostType {
       'supports'=>array( 'title', 'editor', 'thumbnail', 'excerpt' )
     );
     //allow child classes/plugins to modify...
-    $args = apply_filters('jvc_post_type_args',$args);
+    $args = apply_filters('wpplgnzr_post_type_args',$args);
     register_post_type( strtolower($sing_name), $args );
   }
 } 

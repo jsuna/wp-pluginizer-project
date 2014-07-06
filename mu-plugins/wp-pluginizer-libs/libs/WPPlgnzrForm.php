@@ -34,12 +34,14 @@ class WPPlgnzrForm {
     return apply_filters('wpplnzr_form_end',$form);
   }
   public function form_body(){
+    #echo '<pre>';print_r($this->fields);die;
     if(count($this->fields)){
       foreach($this->fields as $fld=>$data){
         if($data['type'] == 'group'){
-          $fields[] = '<fieldset><legend><strong>'.$data['label'].'</strong></legend>';
+          $fields[] = '<fieldset id="'.$fld.'"><legend><strong>'.$data['label'].'</strong></legend>';
           if(count($data['dependants'])){
             foreach($data['dependants'] as $dep_fld){
+              $dbug[] = $dep_fld.' :: '.(isset($this->fields[$dep_fld]));
               if(isset($this->fields[$dep_fld])){
                 $dep_fld_data = $this->fields[$dep_fld];
                 $fields[] = $this->field($dep_fld,$dep_fld_data);
@@ -47,11 +49,13 @@ class WPPlgnzrForm {
             }
           }
           $fields[] = '</fieldset>';
+          #echo '<pre>';print_r($dbug);die;
         }else{
           if(!isset($data['parent']))
             $fields[] = $this->field($fld,$data);
         }
       }
+      #echo '<pre>';print_r($fields);die;
       return (count($fields))?(count($fields)==1)?$fields[0]:join("\n",$fields):false;
     }
     return false;
@@ -71,6 +75,7 @@ class WPPlgnzrForm {
   }
   public function field($fld,$data,$opts=array(),$fld_base=false){
     $opts = apply_filters('wpplgnzr_form_field_vals',$opts);
+
     global $plugin_page;
     $fldname = (!$plugin_page)?(!$fld_base)?$fld:$fld_base.'['.$fld.']':$plugin_page.'['.$fld.']';
     $fldname = ' name="'.$fldname.'"';
@@ -84,23 +89,27 @@ class WPPlgnzrForm {
     $type = ' type="'.$data['type'].'"';
     $desc = (isset($data['description']))?$data['description']:'';
     $tag = (isset($data['tag']))?$data['tag']:'div';
+    $pholder = (isset($data['placeholder']) && !empty($data['placeholder']))?
+      ' placeholder="'.$data['placeholder'].'"':'';
     switch($data['type']){
       case 'text':
+        #echo '<pre>';print_r($opts[$fld]);die;
         $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
+        $fldval = (isset($data['value']) && !trim($fldval))?$data['value']:$fldval;
         $value = ' value="'.$fldval.'"';
         $field = array(
           'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$value} />",
+          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$value}{$pholder} />",
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L][F]<br>[D]<br>'
         );
         break;
       case 'textarea':
         $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
-
+        $fldval = (isset($data['value']) && !trim($fldval))?$data['value']:'';
         $field = array(
           'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<textarea{$id}{$class}{$style}{$readonly}{$type}{$fldname}>{$fldval}</textarea>",
+          'field'=>"<textarea{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$pholder}>{$fldval}</textarea>",
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L]<br>[F]<br>[D]<br>'
         );
@@ -124,11 +133,14 @@ class WPPlgnzrForm {
         }
         #die(print_r($field));
         break;
+      case 'radio':
       case 'checkbox':
-        $chked = (isset($opts[$fld]))?' checked="checked"':'';
+        #die();
+        $chked = (isset($opts[$fld]) && $opts[$fld])?' checked="checked"':'';
+
         $field = array(
           'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname} />",
+          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$chked} />",
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[F][L]<br>[D]<br>'
         );
@@ -178,7 +190,8 @@ class WPPlgnzrForm {
         );
         break;
       case 'hidden':
-        $value = ' value=""';
+        $fldval = (isset($data['value']))?$data['value']:'';
+        $value = ' value="'.$fldval.'"';
         $field = array(
           'label'=>'',
           'field'=>"<input{$type}{$fldname}{$value} />",

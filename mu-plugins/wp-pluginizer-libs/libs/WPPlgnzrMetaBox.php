@@ -14,6 +14,7 @@ class WPPlgnzrMetaBox {
   public $fields = array();
   public $post = false;
   public function __construct(){
+
     add_action('add_meta_boxes',array($this,'_add_meta_box'),0);
     if(method_exists($this,'get_post_data'))
       add_action('admin_head',array($this,'get_post_data'));
@@ -37,80 +38,27 @@ class WPPlgnzrMetaBox {
   public function _render_metabox(){
     global $post;
     $this->load_metabox_vars();
-    #if($this->metabox == 'jvc_listing_metabox_info') { echo '<pre>';print_r($this->metabox_vars);die; }
-    if(method_exists($this,'render_metabox')){
+    if(method_exists($this,'render_metabox'))
       $this->render_metabox();
-    }else{
-      echo '<table cellspacing="0" cellpadding="0" style="width:100%">';
-      foreach($this->fields as $fld=>$data){
-        $mbvfld = $post->post_type.'_'.$fld;
-        $readonly = (isset($data['readonly']) && $data['readonly'])?' readonly="readonly"':'';
-        $style = (isset($data['width']) && !empty($data['width']))?' style="width:'.$data['width'].'"':'';
-        switch($data['type']){
-          case 'text':
-            echo '<tr>'.
-              '<td style="width:22%"><label style="font-weight:bold">'.$data['label'].'</label></td>'.
-              '<td style="width:78%">'.
-              '<input'.$style.$readonly.' type="text" value="'.$this->metabox_vars[$mbvfld].'"
-            name="jvc_pt_fields[metabox]['.$post->post_type.']['.$fld.']'.'" /></td>'.
-              '</tr>';
-            break;
-          case 'select':
-
-            echo '<tr>'.
-              '<td style="width:22%"><label style="font-weight:bold">'.$data['label'].'</label></td>'.
-              '<td style="width:78%">'.
-              '<select'.$style.$readonly.' name="jvc_pt_fields[metabox]['.$post->post_type.']['.$fld.']'.'">';
-            if(count($data['options']))
-              foreach($data['options'] as $v=>$opt){
-                $selected = (isset($this->metabox_vars[$mbvfld]) && $this->metabox_vars[$mbvfld] == $v)?'
-                selected="selected"':'';
-                echo '<option'.$selected.' value="'.$v.'">'.$opt.'</option>';
-              }
-            echo '</select></td>'.
-              '</tr>';
-            break;
-          case 'checkbox':
-            $chked = (isset($this->metabox_vars[$mbvfld]) && $this->metabox_vars[$mbvfld])?' checked="checked"':'';
-            echo '<tr>'.
-              '<td style="width:22%"><label style="padding-bottom:10px;font-weight:bold">'.$data['label']
-              .'</label></td>'.
-              '<td style="width:78%">'.
-              '<div style="padding-bottom:10px"><input type="checkbox"'.$style.$readonly.$chked.'
-              name="jvc_pt_fields[metabox]['
-              .$post->post_type.']['
-          .$fld.']'
-              .'"> '.$data['description'].'</div></td>';
-              '</tr>';
-            break;
-          case 'textarea':
-            echo '<tr><td colspan="2"><label style="font-weight:bold">'.$data['label'].'</label></td></tr>'.
-              '<tr>'.
-              '<td colspan="2">'.
-              '<textarea'.$style.$readonly.' name="jvc_pt_fields[metabox]['.$post->post_type.']['.$fld.']'.'">'.
-              $this->metabox_vars[$mbvfld].
-              '</textarea></td>'.
-              '</tr>';
-            break;
-        }
-        echo (isset($data['description']) && $data['type'] != 'checkbox')?
-          '<tr><td style="text-align:left;font-size:12px;padding-bottom:10px;padding-left:22%" colspan="2"><address>'
-          .$data['description']
-          .'</address></td></tr>':'';
-      }
-      echo '</table>';
-    }
-    #exit;
   }
   protected function load_metabox_vars(){
     global $post;
-    if(count($this->fields)){
-      foreach($this->fields as $fld=>$data){
-        $val = get_post_meta($post->ID,$post->post_type.'_'.$fld,true);
+    $fields = apply_filters('wppglgnzr_save_fields',$this->fields);
+    if(count($fields)){
+      $pc = get_post_custom($post->ID);
+      foreach($fields as $fld=>$data){
+        $val = $pc[$fld][0];
+        $val = (!unserialize($val))?$val:unserialize($val);
         if(!trim($val)) continue;
-        $pm[$post->post_type.'_'.$fld] = $val;
+        $pm[$fld] = $val;
+      }
+      if(isset($pc['wpplgnzr_dynamic'])){
+        $val = $pc['wpplgnzr_dynamic'][0];
+        $val = (!unserialize($val))?$val:unserialize($val);
+        $pm['wpplgnzr_dynamic'] = $val;
       }
       $this->metabox_vars = (isset($pm) && is_array($pm))?array_merge($this->metabox_vars,$pm):$this->metabox_vars;
+      #echo '<pre>';print_r($this->metabox_vars);die;
       #if($this->metabox == 'jvc_listing_metabox_info') { echo '<pre>';print_r($this->metabox_vars);die; }
     }
   }
@@ -119,19 +67,55 @@ class WPPlgnzrMetaBox {
       ( defined( 'DOING_AJAX' ) && DOING_AJAX ))
       return;
     global $post;
-    $to_save = $_POST['jvc_pt_fields']['metabox'][$post->post_type];
-    foreach($this->fields as $fld=>$data){
-      $val = (isset($to_save[$fld]) && trim($to_save[$fld]))?$to_save[$fld]:'';
-      if($data['type'] == 'checkbox')
-        $val = true;
-      $pm[$post->post_type.'_'.$fld] = $val;
+    $skip_types = array(
+      'group',
+      'submit',
+      'reset',
+      'button',
+      'html'
+    );
+    if(isset($_POST)){
+      $to_save = $_POST;
+      $fields = apply_filters('wppglgnzr_save_fields',$this->fields);
+      #echo '<pre>';print_r($to_save);die;
+      foreach($fields as $fld=>$data){
+        if(in_array($data['type'],$skip_types) || (isset($data['nosave']) && $data['nosave'])){
+          if(isset($to_save[$fld]))
+            unset($to_save[$fld]);
+          continue;
+        }
+
+        $val = (isset($to_save[$fld]) && trim($to_save[$fld]))?$to_save[$fld]:'';
+        if(isset($to_save[$fld]) && ($data['type'] == 'checkbox' || $data['type'] == 'radio'))
+          $val = true;
+        $pm[$fld] = $val;
+        unset($to_save[$fld]);
+      }
+      #echo '<pre>';print_r($to_save);die;
+      $dynamic_pm = get_post_meta($post->ID,'wpplgnzr_dynamic',true);
+      if(isset($to_save['wpplgnzr_dynamic']) && count($to_save['wpplgnzr_dynamic'])){
+        //fields that may have been added dynamically..name="dyn[type][fldname]"
+        foreach($to_save['wpplgnzr_dynamic'] as $type=>$fldVal){
+          if($type == 'checkbox' || $type == 'radio')
+            $val = true;
+          $fld = array_keys($fldVal);
+          $fld = $fld[0];
+          $pm['wpplgnzr_dynamic'][$type] = $fldVal;
+        }
+      }else{
+        //no dynamic fields to save, if there are previously saved dynamic fields remove the post meta
+        if(is_array($dynamic_pm))
+          delete_post_meta($post->ID,'wpplgnzr_dynamic');
+      }
+      $pm = (is_array($pm) && count($pm))?array_filter($pm):array();
+      #echo '<pre>';print_r($pm);die;
+      if(count($pm)){
+        foreach($pm as $key=>$val)
+          update_post_meta($post->ID,$key,$val);
+      }
+      //do extra saving stuff...maybe save stuff elsewhere as well??
+      do_action('wppglgnzr_save_mb',$post->ID,$_POST);
     }
 
-    $pm = array_filter($pm);
-    //if($this->metabox == 'jvc_listing_metabox_info') { echo '<pre>';print_r($pm);die; }
-    if(count($pm)){
-      foreach($pm as $key=>$val)
-        update_post_meta($post->ID,$key,$val);
-    }
   }
 } 
