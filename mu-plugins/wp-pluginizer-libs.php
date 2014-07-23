@@ -5,7 +5,7 @@
  * Date: 1/23/14
  * Time: 2:52 PM
  */
-/** Testings commits */
+/** Testing External Drive */
 define('WPPLGNZR_LIBS_DIR',dirname(__FILE__).'/wp-pluginizer-libs/libs/');
 define('WPPLGNZR_THESIS_DIR',dirname(__FILE__).'/wp-pluginizer-libs/themes/thesis/');
 class WPPlgnzrPluginizerLibs {
