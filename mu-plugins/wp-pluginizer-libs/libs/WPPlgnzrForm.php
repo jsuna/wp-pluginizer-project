@@ -38,7 +38,8 @@ class WPPlgnzrForm {
     if(count($this->fields)){
       foreach($this->fields as $fld=>$data){
         if($data['type'] == 'group'){
-          $fields[] = '<fieldset id="'.$fld.'"><legend><strong>'.$data['label'].'</strong></legend>';
+          $class = (isset($data['class']) && !empty($data['class']))?' class="'.$data['class'].'"':'';
+          $fields[] = '<fieldset id="'.$fld.'"'.$class.'><legend><strong>'.$data['label'].'</strong></legend>';
           if(count($data['dependants'])){
             foreach($data['dependants'] as $dep_fld){
               $dbug[] = $dep_fld.' :: '.(isset($this->fields[$dep_fld]));
@@ -203,7 +204,7 @@ class WPPlgnzrForm {
         #die('here');
         $field = array(
           'label'=>'',
-          'field'=>'<'.$tag.$id.$class.'>'.$desc.'</'.$tag.'>',
+          'field'=>(!trim($tag))?$desc:'<'.$tag.$id.$class.'>'.$desc.'</'.$tag.'>',
           'desc'=>'',
           'format'=>(isset($data['format']))?$data['format']:'[F]'
         );
