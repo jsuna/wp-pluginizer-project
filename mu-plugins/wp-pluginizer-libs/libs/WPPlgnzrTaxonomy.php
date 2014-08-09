@@ -15,7 +15,17 @@ class WPPlgnzrTaxonomy {
     'query_var' => '',
     'public'=>true
   );
-  public function __construct(){
+  public $tax_name;
+  public $taxonomy;
+  public $post_type;
+  public $post_types = array();
+  public function __construct($args = array()){
+    if(count($args)){
+      extract($args);
+      $this->tax_name = $tax_name;
+      $this->taxonomy = $taxonomy;
+      $this->post_type = $post_type;
+    }
     $this->settings['labels'] = array(
       'name' => $this->tax_name,
       'singluar_name' => $this->tax_name,

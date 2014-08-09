@@ -10,6 +10,8 @@ class WPPlgnzrForm {
   public $action = '';
   public $method = 'get';
   public $html = 'form';
+  public $field_base;
+  public $values;
   public $fld_format_indxs = array(
     '[L]'=>'%1$s',
     '[F]'=>'%2$s',
@@ -24,9 +26,12 @@ class WPPlgnzrForm {
     $this->html   = (isset($html))?$html:$this->html;
     $this->fields = (isset($fields))?$fields:$this->fields;
     $this->id = (isset($id))?' id="'.$id.'"':'';
+    $this->class = (isset($class))?' class="'.$class.'"':'';
+    $this->field_base = (isset($field_base))?$field_base:false;
+    $this->values = (isset($values))?$values:array();
   }
   public function start(){
-    $form = '<form'.$this->id.' action="'.$this->action.'" method="'.$this->method.'">';
+    $form = '<form'.$this->id.$this->class.' action="'.$this->action.'" method="'.$this->method.'">';
     return apply_filters('wpplnzr_form_start',$form);
   }
   public function end(){
@@ -45,7 +50,7 @@ class WPPlgnzrForm {
               $dbug[] = $dep_fld.' :: '.(isset($this->fields[$dep_fld]));
               if(isset($this->fields[$dep_fld])){
                 $dep_fld_data = $this->fields[$dep_fld];
-                $fields[] = $this->field($dep_fld,$dep_fld_data);
+                $fields[] = $this->field($dep_fld,$dep_fld_data,$this->values,$this->field_base);
               }
             }
           }
@@ -53,7 +58,7 @@ class WPPlgnzrForm {
           #echo '<pre>';print_r($dbug);die;
         }else{
           if(!isset($data['parent']))
-            $fields[] = $this->field($fld,$data);
+            $fields[] = $this->field($fld,$data,$this->values,$this->field_base);
         }
       }
       #echo '<pre>';print_r($fields);die;
@@ -76,9 +81,12 @@ class WPPlgnzrForm {
   }
   public function field($fld,$data,$opts=array(),$fld_base=false){
     $opts = apply_filters('wpplgnzr_form_field_vals',$opts);
-
+    if($fld == 'price_ranges_buy'){
+      #echo '<pre>';print_r($opts[$fld]);die;
+    }
     global $plugin_page;
-    $fldname = (!$plugin_page)?(!$fld_base)?$fld:$fld_base.'['.$fld.']':$plugin_page.'['.$fld.']';
+
+    $fldname = (!$fld_base)?(!$plugin_page)?$fld:$plugin_page.'['.$fld.']':$fld_base.'['.$fld.']';
     $fldname = ' name="'.$fldname.'"';
     $readonly = (isset($data['readonly']) && $data['readonly'])?' readonly="readonly"':'';
     $style = (isset($data['width']) && !empty($data['width']))?' style="width:'.$data['width'].'"':'';
@@ -92,89 +100,117 @@ class WPPlgnzrForm {
     $tag = (isset($data['tag']))?$data['tag']:'div';
     $pholder = (isset($data['placeholder']) && !empty($data['placeholder']))?
       ' placeholder="'.$data['placeholder'].'"':'';
+    $label_class = (isset($data['label_class']))?' '.$data['label_class']:'';
+    $label_for = ' for="'.$fld.'"';
+    //combine..
+
+    $lbl_start = sprintf('<label class="wpplgnzr-form-label%s"%s>',$label_class,$label_for);
+    $lbl_end = '</label>';
+
     switch($data['type']){
       case 'text':
         #echo '<pre>';print_r($opts[$fld]);die;
         $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
         $fldval = (isset($data['value']) && !trim($fldval))?$data['value']:$fldval;
         $value = ' value="'.$fldval.'"';
+        $label = sprintf('%s%s%s',$lbl_start,$data['label'],$lbl_end);
+        $inp_attrs = $id.$class.$style.$readonly.$type.$fldname.$value.$pholder;
+        $inp = sprintf('<input%s />',$inp_attrs);
         $field = array(
-          'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$value}{$pholder} />",
+          'label'=>$label,
+          'field'=>$inp,
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L][F]<br>[D]<br>'
         );
         break;
       case 'textarea':
         $fldval = (isset($opts[$fld]))?$opts[$fld]:'';
-        $fldval = (isset($data['value']) && !trim($fldval))?$data['value']:'';
+
+        $fldval = (isset($data['value']) && !trim($fldval))?$data['value']:$fldval;
+        $label = sprintf('%s%s%s',$lbl_start,$data['label'],$lbl_end);
+        $rows = (isset($data['rows']))?$data['rows']:6;
+        $rows = ' rows="'.$rows.'"';
+        $inp_attrs = $id.$class.$style.$readonly.$type.$fldname.$rows.$pholder;
+        $inp = sprintf('<textarea%s>%s</textarea>',$inp_attrs,$fldval);
+        if($fld == 'price_ranges_buy'){
+          #echo '<pre>';print_r($fldval);die;
+        }
         $field = array(
-          'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<textarea{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$pholder}>{$fldval}</textarea>",
+          'label'=>$label,
+          'field'=>$inp,
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L]<br>[F]<br>[D]<br>'
         );
         break;
-      case 'radio_select':
+      /*case 'radio_select':
         $type = ' type="radio"';
         if(count($data['options'])){
           foreach($data['options'] as $chkopt=>$label){
-            $chked = (isset($opts[$fld][$chkopt]))?' checked="checked"':'';
+            $chked = (isset($opts[$fld][$chkopt]) && $opts[$fld][$chkopt])?' checked="checked"':'';
             $fldname = (!$plugin_page)?$fld:$plugin_page.'['.$fld.']';
             $fldname = ' name="'.$fldname.'"';
             $fldval = ' value="'.$chkopt.'"';
+            $inp_attrs = $id.$class.$style.$readonly.$type.$fldname.$fldval.$chked;
+            $inp = sprintf('%s<input%s />%s%s',$lbl_start,$inp_attrs,$data['label'],$lbl_end);
             $field['options_field'][$data['label']]['format'] = (isset($data['format']))?$data['format']:'[OFL]<br>[OFO]<br>[D]<br>';
             $field['options_field'][$data['label']]['desc'] = (isset($data['description']))?$data['description']:'';
             $field['options_field'][$data['label']]['opts'][] = array(
-              'label'=>'<label class="wpplgnzr-form-label">'.$label.'</label>',
-              'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$fldval} />",
+              'label'=>'',
+              'field'=>$inp,
               'format'=>(isset($data['option_format']) && !empty($data['option_format']))?$data['option_format']:'[F][L]<br>'
             );
           }
         }
         #die(print_r($field));
-        break;
+        break;*/
       case 'radio':
       case 'checkbox':
         #die();
         $chked = (isset($opts[$fld]) && $opts[$fld])?' checked="checked"':'';
-
+        $inp_attrs = $id.$class.$style.$readonly.$type.$fldname.$chked;
+        $inp = sprintf('%s<input%s />%s%s',$lbl_start,$inp_attrs,$data['label'],$lbl_end);
         $field = array(
-          'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$chked} />",
+          'label'=>'',
+          'field'=>$inp,
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
-          'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[F][L]<br>[D]<br>'
+          'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[F]<br>[D]<br>'
         );
         break;
+      case 'radio_select':
       case 'checkbox_select':
-        $type = ' type="checkbox"';
+        $type = ' type="'.(($data['type'] == 'radio_select')?'radio':'checkbox').'"';
         if(count($data['options'])){
           foreach($data['options'] as $chkopt=>$label){
             $chked = (isset($opts[$fld][$chkopt]))?' checked="checked"':'';
-            $fldname = (!$plugin_page)?$fld:$plugin_page.'['.$fld.']';
+            $fldname = (!$fld_base)?(!$plugin_page)?$fld:$plugin_page.'['.$fld.']':$fld_base.'['.$fld.']';
             $fldname = ' name="'.$fldname.'"';
             $fldval = ' value="'.$chkopt.'"';
+            $inp_attrs = $id.$class.$style.$readonly.$type.$fldname.$fldval.$chked;
+            $inp = sprintf('%s<input%s />%s%s',$lbl_start,$inp_attrs,$label,$lbl_end);
             $field['options_field'][$data['label']]['format'] = (isset($data['format']))?$data['format']:'[OFL]<br>[OFO]<br>[D]<br>';
             $field['options_field'][$data['label']]['desc'] = (isset($data['description']))?$data['description']:'';
             $field['options_field'][$data['label']]['opts'][] = array(
-              'label'=>'<label class="wpplgnzr-form-label">'.$label.'</label>',
-              'field'=>"<input{$id}{$class}{$style}{$readonly}{$type}{$fldname}{$fldval} />",
+              'label'=>'',
+              'field'=>$inp,
               'format'=>(isset($data['option_format']) && !empty($data['option_format']))?$data['option_format']:'[F][L]<br>'
             );
           }
         }
         break;
       case 'select':
-        $opts = '';
+        $options = '';
         if(count($data['options'])){
           foreach($data['options'] as $selopt=>$label){
             $selected = (isset($opts[$fld]) && $opts[$fld] == $selopt)?' selected="selected"':'';
-            $opts .= '<option'.$selected.' value="'.$selopt.'">'.$label.'</option>';
+            $options .= '<option'.$selected.' value="'.$selopt.'">'.$label.'</option>';
           }
         }
+        $label = sprintf('%s%s%s',$lbl_start,$data['label'],$lbl_end);
+        $inp_attrs = $id.$class.$style.$readonly.$type.$fldname;
+        $inp = sprintf('<select%s>%s</select>',$inp_attrs,$options);
         $field = array(
-          'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
-          'field'=>"<select{$id}{$class}{$style}{$readonly}{$type}{$fldname}>{$opts}</select>",
+          'label'=>$label,
+          'field'=>$inp,
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L][F]<br>[D]<br>'
         );
@@ -223,6 +259,7 @@ class WPPlgnzrForm {
             $fld .= sprintf($format, $d['label'],$d['field']);
           }
         }
+        $label = sprintf('%s%s%s',$lbl_start,$label,$lbl_end);
         $fmt = str_replace('[OFO]',$fld,$data['format']);
         $fmt = str_replace($ff_tokes,$ff_reps,$fmt);
         $ret_field[] = sprintf($fmt, '','',$data['desc'],$label);

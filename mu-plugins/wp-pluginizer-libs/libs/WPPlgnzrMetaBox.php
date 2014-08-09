@@ -77,7 +77,7 @@ class WPPlgnzrMetaBox {
     if(isset($_POST)){
       $to_save = $_POST;
       $fields = apply_filters('wppglgnzr_save_fields',$this->fields);
-      #echo '<pre>';print_r($to_save);die;
+      #echo '<pre>';print_r($fields);die;
       foreach($fields as $fld=>$data){
         if(in_array($data['type'],$skip_types) || (isset($data['nosave']) && $data['nosave'])){
           if(isset($to_save[$fld]))
