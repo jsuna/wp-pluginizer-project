@@ -198,19 +198,28 @@ class WPPlgnzrForm {
         }
         break;
       case 'select':
-        $options = '';
+        $opts = '';
         if(count($data['options'])){
+          $option = '<option%s value="%s">%s</option>';
+          $optgroup = '<optgroup label="%s">%s</optgroup>';
           foreach($data['options'] as $selopt=>$label){
-            $selected = (isset($opts[$fld]) && $opts[$fld] == $selopt)?' selected="selected"':'';
-            $options .= '<option'.$selected.' value="'.$selopt.'">'.$label.'</option>';
+            if(is_array($label)){
+              $tmp = '';
+              foreach($label as $optval=>$optlabel){
+                $selected = (isset($opts[$fld]) && $opts[$fld] == $optval)?' selected="selected"':'';
+                $tmp .= sprintf($option,$selected,$optval,$optlabel);
+              }
+              $opts .= sprintf($optgroup,ucfirst($selopt),$tmp);
+            }else{
+              $selected = (isset($opts[$fld]) && $opts[$fld] == $selopt)?' selected="selected"':'';
+              $opts .= sprintf($option,$selected,$selopt,$label);
+            }
+
           }
         }
-        $label = sprintf('%s%s%s',$lbl_start,$data['label'],$lbl_end);
-        $inp_attrs = $id.$class.$style.$readonly.$type.$fldname;
-        $inp = sprintf('<select%s>%s</select>',$inp_attrs,$options);
         $field = array(
-          'label'=>$label,
-          'field'=>$inp,
+          'label'=>'<label class="wpplgnzr-form-label">'.$data['label'].'</label>',
+          'field'=>"<select{$id}{$class}{$style}{$readonly}{$type}{$fldname}>{$opts}</select>",
           'desc'=>(!empty($desc))?'<div class="wpplgnzr-field-description">'.$desc.'</div>':'',
           'format'=>(isset($data['format']) && !empty($data['format']))?$data['format']:'[L][F]<br>[D]<br>'
         );
